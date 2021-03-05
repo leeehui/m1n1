@@ -3,6 +3,7 @@
 
 import os, sys, struct
 from serial.tools.miniterm import Miniterm
+import time
 
 def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
@@ -134,28 +135,55 @@ class UartInterface:
             sys.stdout.write(chr(c))
             sys.stdout.flush()
 
-    def ttymode(self):
+    def wait_one_cmd(self):
+        while True:
+            bytes_left = self.dev.in_waiting
+            if bytes_left == 0:
+                time.sleep(0.1)
+                bytes_left = self.dev.in_waiting
+                if bytes_left == 0:
+                    break
+            else:
+                #sys.stdout.buffer.write(self.dev.read(bytes_left))
+                sys.stdout.buffer.write(self.readfull(1))
+                sys.stdout.buffer.flush()
+
+    def ttymode(self, cmds):
         tout = self.dev.timeout
         self.tty_enable = True
         self.dev.timeout = None
 
-        term = Miniterm(self.dev, eol='cr')
-        term.exit_character = chr(0x1d)  # GS/CTRL+]
-        term.menu_character = chr(0x14)  # Menu: CTRL+T
-        term.raw = True
-        term.set_rx_encoding('UTF-8')
-        term.set_tx_encoding('UTF-8')
+        if cmds != None:
+            try:
+                with open(str(cmds), 'rb') as f:
+                    while True:
+                        block = f.readline()
+                        if not block:
+                            break
+                        self.dev.write(block)
+                        self.dev.flush()
+                        self.wait_one_cmd()
+            except IOError as e:
+                sys.stderr.write('--- ERROR opening file {}: {} ---\n'.format(str(cmds), e))
+                
+        else:
+            term = Miniterm(self.dev, eol='cr')
+            term.exit_character = chr(0x1d)  # GS/CTRL+]
+            term.menu_character = chr(0x14)  # Menu: CTRL+T
+            term.raw = True
+            term.set_rx_encoding('UTF-8')
+            term.set_tx_encoding('UTF-8')
 
-        print('--- TTY mode | Quit: CTRL+] | Menu: CTRL+T ---')
-        term.start()
-        try:
-            term.join(True)
-        except KeyboardInterrupt:
-            pass
+            print('--- TTY mode | Quit: CTRL+] | Menu: CTRL+T ---')
+            term.start()
+            try:
+                term.join(True)
+            except KeyboardInterrupt:
+                pass
 
-        print('--- Exit TTY mode ---')
-        term.join()
-        term.close()
+            print('--- Exit TTY mode ---')
+            term.join()
+            term.close()
 
         self.dev.timeout = tout
         self.tty_enable = False
@@ -579,7 +607,7 @@ class M1N1Proxy:
     def smp_call(self, cpu, addr, *args):
         if len(args) > 4:
             raise ValueError("Too many arguments")
-        self.request(self.P_SMP_CALL, cpu, addr, *args)
+        self.request(self.P_SMP_CALL, cpu, addr, *args, no_reply=True)
 
     def smp_call_sync(self, cpu, addr, *args):
         if len(args) > 4:
