@@ -83,10 +83,10 @@ void exception_initialize(void)
                       BIT(37) | // TEA
                       BIT(34) | // E2H
                       BIT(31) | // RW
-                      BIT(27) | // TGE
+                      BIT(27) /*| // TGE
                       BIT(5) |  // AMO
                       BIT(4) |  // IMO
-                      BIT(3));  // FMO
+                      BIT(3)*/);  // FMO
         );
         // Set up exception forwarding from EL1
         msr(VBAR_EL12, _el1_vectors_start);
