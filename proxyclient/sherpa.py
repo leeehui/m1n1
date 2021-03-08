@@ -70,6 +70,7 @@ for i in range(1, 8):
     p.smp_call(i, kernel_base)
     time.sleep(0.2) #seems sherpa do NOT support simultaneously smp boot, so must sleep!
 
+time.sleep(3)
 print("Ready to boot")
 daif = u.mrs(DAIF)
 daif |= 0x3c0
