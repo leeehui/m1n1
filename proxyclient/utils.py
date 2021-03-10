@@ -84,6 +84,27 @@ class ProxyUtils(object):
         if cnt:
             raise ProxyError("Exception occurred")
 
+    def msr_isb(self, reg, val, silent=False, el0=False, call=None):
+        if call is None:
+            call = self.proxy.call
+        op0, op1, CRn, CRm, op2 = reg
+
+        op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
+               (CRm << 8) | (op2 << 5) | 0xd5100000)
+
+        func = struct.pack("<III", op, 0xd5033fdf, 0xd65f03c0) #isb, ret opcode
+
+        self.iface.writemem(self.code_buffer, func)
+        self.proxy.dc_cvau(self.code_buffer, 8)
+        self.proxy.ic_ivau(self.code_buffer, 8)
+
+        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP | (self.proxy.GUARD_SILENT if silent else 0))
+        call(self.code_buffer, val)
+        cnt = self.proxy.get_exc_count()
+        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        if cnt:
+            raise ProxyError("Exception occurred")
+        
     def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, call=None):
         if call is None:
             call = self.proxy.call

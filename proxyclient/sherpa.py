@@ -7,6 +7,8 @@ parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('-c', '--cmds', type=pathlib.Path)
 args = parser.parse_args()
 
+core_num = 8
+
 from setup import *
 
 print(args.payload)
@@ -65,12 +67,12 @@ print("Ready to kick other cpus to kernel")
 #print("smp_start_secondaries...")
 #p.smp_start_secondaries()
 # see def test_smp_ipi(): for more detailed info
-for i in range(1, 8):
+for i in range(1, core_num):
     print("core %d jumping to kernel..." % i)
     p.smp_call(i, kernel_base)
-    time.sleep(0.5) #seems sherpa do NOT support simultaneously smp boot, so must sleep!
+    iface.wait_one_cmd(silent = True)
+    #time.sleep(1) #seems sherpa do NOT support simultaneously smp boot, so must sleep!
 
-time.sleep(2)
 print("Ready to boot")
 daif = u.mrs(DAIF)
 daif |= 0x3c0
@@ -78,7 +80,12 @@ u.msr(DAIF, daif)
 print("DAIF: %x" % daif)
 
 p.kboot_boot(kernel_base)
-time.sleep(1)
+
+# wait 8 core bringup
+for i in range(core_num):
+    # fixme: b'[shell info]start shell main proc,the elf file start addr is'  does NOT work!
+    iface.wait_run_elf_cmd(b'shell info]start shell main proc,the elf file start addr is')
+    print("booted core num: %d" % (i+1))
 
 iface.ttymode(cmds=args.cmds)
 

@@ -4,6 +4,7 @@
 import os, sys, struct
 from serial.tools.miniterm import Miniterm
 import time
+import re
 
 def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
@@ -111,6 +112,23 @@ class UartInterface:
                 raise UartTimeout("Expected %d bytes, got %d bytes"%(size,len(d)))
             d += block
         return d
+    
+    def wait_run_elf_cmd(self, ascii_pattern):
+        buf = []
+        #byte_pattern = bytes("]Success", encoding="utf-8")
+        while True:
+            byte = self.readfull(1)
+            sys.stdout.buffer.write(byte)
+            sys.stdout.buffer.flush()
+            buf.append(int.from_bytes(byte, "little"))
+            if byte == b'\n':
+                #if re.match(b']Success', buf):
+                buf_array = bytes(buf)
+                if re.search(ascii_pattern, buf_array):
+                    #print("wait run_elf ok")
+                    break
+                else:
+                    buf.clear()
 
     def cmd(self, cmd, payload=b""):
         if len(payload) > self.CMD_LEN:
@@ -135,18 +153,20 @@ class UartInterface:
             sys.stdout.write(chr(c))
             sys.stdout.flush()
 
-    def wait_one_cmd(self):
+    def wait_one_cmd(self, silent = False):
         while True:
             bytes_left = self.dev.in_waiting
             if bytes_left == 0:
-                time.sleep(1)
+                time.sleep(0.2)
                 bytes_left = self.dev.in_waiting
                 if bytes_left == 0:
                     break
             else:
                 #sys.stdout.buffer.write(self.dev.read(bytes_left))
-                sys.stdout.buffer.write(self.readfull(1))
-                sys.stdout.buffer.flush()
+                byte = self.readfull(1)
+                if silent == False:
+                    sys.stdout.buffer.write(byte)
+                    sys.stdout.buffer.flush()
 
     def ttymode(self, cmds):
         tout = self.dev.timeout
@@ -162,7 +182,12 @@ class UartInterface:
                             break
                         self.dev.write(block)
                         self.dev.flush()
-                        self.wait_one_cmd()
+                        if re.search(b'run_elf', block):
+                            print("wait_run_elf_cmd")
+                            self.wait_run_elf_cmd(b']Success')
+                        else:
+                            print("wait_one_cmd")
+                            self.wait_one_cmd()
             except IOError as e:
                 sys.stderr.write('--- ERROR opening file {}: {} ---\n'.format(str(cmds), e))
                 

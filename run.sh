@@ -9,9 +9,8 @@ macvdmtool_dir=$root_dir/macvdmtool
 test_dir=$root_dir/m1n1-ftp/auto
 #test_dir=$root_dir/m1n1-ftp/test-dir
 
-#cmds=$test_dir/cmds
 cmds=$m1n1_dir/cmds
-#cmds=$m1n1_dir/cmds-hwp
+#cmds=$m1n1_dir/cmds-hwp-off
 test_output_dir=$test_dir/output
 
 echo "ready to run $1 times"
@@ -50,6 +49,7 @@ do
 	cd -
 	sleep 4
 	echo "running payload"
+	#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds 
 	python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds > $test_output_dir/${file}.log
 	#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
 	rm -rf ${file}.gz
