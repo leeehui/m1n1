@@ -4,8 +4,14 @@ passwd=tgb*963.1
 root_dir=/Users/abc/Projects/AsahiLinux
 m1n1_dir=$root_dir/m1n1-upstream/m1n1
 macvdmtool_dir=$root_dir/macvdmtool
-cmds=$root_dir/m1n1/test
+
+# you may need to change the following two configs
 test_dir=$root_dir/m1n1-ftp/auto
+#test_dir=$root_dir/m1n1-ftp/test-dir
+
+#cmds=$test_dir/cmds
+cmds=$m1n1_dir/cmds
+#cmds=$m1n1_dir/cmds-hwp
 test_output_dir=$test_dir/output
 
 echo "ready to run $1 times"
@@ -45,6 +51,9 @@ do
 	sleep 4
 	echo "running payload"
 	python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds > $test_output_dir/${file}.log
+	#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
 	rm -rf ${file}.gz
 done
 
+echo "reporting..."
+python3.9  ${m1n1_dir}/proxyclient/report.py $test_output_dir 

@@ -68,9 +68,9 @@ print("Ready to kick other cpus to kernel")
 for i in range(1, 8):
     print("core %d jumping to kernel..." % i)
     p.smp_call(i, kernel_base)
-    time.sleep(0.2) #seems sherpa do NOT support simultaneously smp boot, so must sleep!
+    time.sleep(0.5) #seems sherpa do NOT support simultaneously smp boot, so must sleep!
 
-time.sleep(3)
+time.sleep(2)
 print("Ready to boot")
 daif = u.mrs(DAIF)
 daif |= 0x3c0
@@ -78,6 +78,7 @@ u.msr(DAIF, daif)
 print("DAIF: %x" % daif)
 
 p.kboot_boot(kernel_base)
+time.sleep(1)
 
 iface.ttymode(cmds=args.cmds)
 

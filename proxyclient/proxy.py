@@ -139,7 +139,7 @@ class UartInterface:
         while True:
             bytes_left = self.dev.in_waiting
             if bytes_left == 0:
-                time.sleep(0.1)
+                time.sleep(1)
                 bytes_left = self.dev.in_waiting
                 if bytes_left == 0:
                     break
