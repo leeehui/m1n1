@@ -2,7 +2,7 @@
 export M1N1DEVICE=/dev/cu.debug-console
 passwd=tgb*963.1
 root_dir=/Users/abc/Projects/AsahiLinux
-m1n1_dir=$root_dir/m1n1-upstream/m1n1
+m1n1_dir=$root_dir/m1n1
 macvdmtool_dir=$root_dir/macvdmtool
 
 handle_file() 
@@ -21,17 +21,11 @@ handle_path()
 {
 	# you may need to change the following two configs
 	test_dir=$1
-	#test_dir=$root_dir/m1n1-ftp/auto
-	#test_dir=$root_dir/m1n1-ftp/test-dir
-
 	cmds=$2
-	#cmds=$m1n1_dir/cmds
-	#cmds=$m1n1_dir/cmds-hwp-off
 	test_output_dir=$test_dir/output
 	
-	echo "ready to run $1 times"
-	
 	cd $test_dir
+
 	# rm the output dir before stating sub-dirs
 	# make sure dir is clear with only test pay-loads
 	rm -rf $test_output_dir
@@ -50,6 +44,8 @@ handle_path()
 	do
 		echo "making dir: $test_output_dir/$dir"
 		mkdir -p $test_output_dir/$dir
+		rm -rf $test_dir/$dir/*.gz
+		rm -rf $test_dir/$dir/.*
 	done
 	
 	# we are in $test_dir now

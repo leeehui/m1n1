@@ -23,7 +23,7 @@ print("Loading %d bytes to 0x%x..0x%x..." % (compressed_size, compressed_addr, c
 
 iface.writemem(compressed_addr, payload, True)
 
-kernel_size = 200 * 1024 * 1024
+kernel_size = 1000 * 1024 * 1024
 kernel_base = 0x880000000
 
 print("Kernel_base: 0x%x" % kernel_base)

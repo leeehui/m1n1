@@ -45,7 +45,7 @@ def get_info(file_name, sherpa_counter_num):
     info = []
     elf_names = []
     events = []
-    with open(file_name, 'r') as file_content:
+    with open(file_name, 'r', encoding='unicode_escape') as file_content:
         lines = file_content.readlines()
         if is_valid_log(lines):
             elf_names = get_elf_info(lines)
@@ -103,7 +103,8 @@ def do_report(dir_to_report):
     rootdir = str(dir_to_report)
     report_name = os.path.join(rootdir, "report.xls")
     wb = xlwt.Workbook()
-    ws_error = wb.add_sheet("Error")
+    ws_error_startup = wb.add_sheet("Error_startup")
+    #ws_error_cmd_timeout = wb.add_sheet("Error_cmd_timeout")
     error_cnt = 0
     #dirs = os.listdir("/Users/abc/Projects/AsahiLinux/m1n1-ftp/auto/output")
     for root, subdirs, files in os.walk(rootdir):
@@ -134,9 +135,11 @@ def do_report(dir_to_report):
                         fill_sheet_line(ws, row_to_written, info, elf_names, events) 
                         row_delta = row_delta + len(info)
                     else:
-                        ws_error.write(error_cnt, 0, file_path)
+                        ws_error_startup.write(error_cnt, 0, file_path)
                         error_cnt = error_cnt + 1
     wb.save(report_name)
+    if error_cnt:
+        print("total error_cnt: %d, please check report xls" % error_cnt)
 
 
 if __name__ == "__main__":
