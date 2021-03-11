@@ -183,10 +183,10 @@ class UartInterface:
                         self.dev.write(block)
                         self.dev.flush()
                         if re.search(b'run_elf', block):
-                            print("wait_run_elf_cmd")
+                            print("wait_run_elf_cmd", flush=True)
                             self.wait_run_elf_cmd(b']Success')
                         else:
-                            print("wait_one_cmd")
+                            print("wait_one_cmd", flush=True)
                             self.wait_one_cmd()
             except IOError as e:
                 sys.stderr.write('--- ERROR opening file {}: {} ---\n'.format(str(cmds), e))

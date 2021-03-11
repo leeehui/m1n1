@@ -23,20 +23,25 @@ def get_elf_info(lines):
         res = re.match("elf_index    name    addr    size    run_status    run_count    run_total", line)
         if res:
             elf_names.append(lines[idx + 1].split()[1])
+        res = re.match("===========================End=============================", line)
+        if res:
+            break
     #print(elf_names)
     return elf_names 
 
-def get_event_info(lines):
+def get_event_info(lines, sherpa_counter_num):
     events = []
     for idx, line in enumerate(lines): 
         res = re.match("enable counter \d+ ,event is 0x\w+", line)
         if res:
             #print(line)
             events.append(lines[idx].split("event is ")[1].split()[0])
+            if len(events) == sherpa_counter_num:
+                break
     #print(events)
     return events
 
-def get_info(file_name):
+def get_info(file_name, sherpa_counter_num):
     info = []
     elf_names = []
     events = []
@@ -44,7 +49,7 @@ def get_info(file_name):
         lines = file_content.readlines()
         if is_valid_log(lines):
             elf_names = get_elf_info(lines)
-            events = get_event_info(lines)
+            events = get_event_info(lines, sherpa_counter_num)
             # get counter related info
             for idx, line in enumerate(lines):
                 res = re.match("\[C\d\]\[ELF_\w*\]Success", line)
@@ -87,10 +92,12 @@ def fill_sheet_line(ws, row, info, elf_names, events):
             if sub_idx == 4:
                 sub_item = sub_item + " : " + elf_names[int(sub_item)]
             if sub_idx >= 5:
-                sub_item = events[idx * 6 + sub_idx - 5] + " : " + sub_item
+                sub_item = events[sub_idx - 5] + " : " + sub_item
             ws.write(row + idx, sub_idx + 1, sub_item)
 
 def do_report(dir_to_report):
+
+    sherpa_counter_num = 6
     #rootdir = sys.argv[1]()
     #rootdir = "/Users/abc/Projects/AsahiLinux/m1n1-ftp/auto/output"
     rootdir = str(dir_to_report)
@@ -119,13 +126,11 @@ def do_report(dir_to_report):
                     print(file_path)
                     row_to_written = idx + row_delta + 1
                     ws.write(row_to_written, 0, file_name)
-                    info, elf_names, events = get_info(file_path)
+                    info, elf_names, events = get_info(file_path, sherpa_counter_num)
                     if info:
-                        print(info)
-                        print(elf_names)
-                        print(events)
-                        print(idx)
-                        print(row_to_written)
+                        #print(info)
+                        #print(elf_names)
+                        #print(events)
                         fill_sheet_line(ws, row_to_written, info, elf_names, events) 
                         row_delta = row_delta + len(info)
                     else:
