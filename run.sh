@@ -62,11 +62,10 @@ handle_path()
 		cd $macvdmtool_dir
 		echo $passwd | sudo -S ./macvdmtool reboot serial
 		cd -
-		sleep 4
+		sleep 10
 		echo "running payload"
-		#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds 
-		python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds | tee $test_output_dir/${file}.log
-		#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
+		#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds | tee $test_output_dir/${file}.log
+		python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds > $test_output_dir/${file}.log
 		rm -rf ${file}.gz
 	done
 	echo "reporting..."
