@@ -50,6 +50,31 @@ class LogReporter:
         #print(events)
         return events
 
+    def get_ipc_pmc_info(self, line_ipc, line_pmc):
+        # findall int including core num with idx[0]
+        sub_info = []
+        core_cycle_inst = re.findall(r"\d+", line_ipc)
+        if core_cycle_inst:
+            core_num = core_cycle_inst[0]
+            cycle = core_cycle_inst[1]
+            instruction = core_cycle_inst[2]
+            ipc_str = re.findall("ipc = \d+\.\d*", line_ipc)
+            ipc = ipc_str[0].split("ipc = ")[1]
+            sub_info.append(core_num)
+            sub_info.append(ipc)
+            sub_info.append(cycle)
+            sub_info.append(instruction)
+
+        pmcs = re.findall(r"\b\d+\b", line_pmc)
+        for pmc in pmcs:
+            sub_info.append(pmc)
+
+        return sub_info
+
+    def get_rolling_info(self, lines, start_idx):
+        
+        pass
+
     def get_info(self, file_name):
         info = []
         elf_names = []
@@ -61,30 +86,21 @@ class LogReporter:
                 events = self.get_event_info(lines)
                 # get counter related info
                 for idx, line in enumerate(lines):
-                    res = re.match("\[C\d\]\[ELF_\w*\]Success", line)
-                    if res:
+                    if re.match("\[C\d\]\[ELF_\w*\]Success", line):
                         #print(line)
-                        # findall int including core num with idx[0]
-                        sub_info = []
-                        core_cycle_inst = re.findall(r"\d+", lines[idx - 1])
-                        if core_cycle_inst:
-                            core_num = core_cycle_inst[0]
-                            cycle = core_cycle_inst[1]
-                            instruction = core_cycle_inst[2]
-                            ipc_str = re.findall("ipc = \d+\.\d*", lines[idx - 1])
-                            ipc = ipc_str[0].split("ipc = ")[1]
-                            sub_info.append(core_num)
-                            sub_info.append(ipc)
-                            sub_info.append(cycle)
-                            sub_info.append(instruction)
-                        pmcs = re.findall(r"\b\d+\b", lines[idx - 2])
-                        for pmc in pmcs:
-                            sub_info.append(pmc)
+                        start_idx = idx - 1
+                        if re.match("\[C\d\]\[SVCROLLING\]", lines[idx - 1]):
+                            start_idx -= 1
 
+                        if re.match("\[C\d\]\[ROLLING\]", lines[idx - 1]):
+                            sub_info = self.get_rolling_info(lines, start_idx) 
+                        else:
+                            sub_info = self.get_ipc_pmc_info(lines[start_idx], lines[start_idx - 1]) 
                         info.append(sub_info)
                     else:
                         # no valid info
                         pass
+                    
             else:
                 pass
         return (info, elf_names, events)
@@ -118,8 +134,6 @@ class LogReporter:
                 ws.write(row + idx, col + sub_idx + 1, sub_item)
 
     def do_report(self, dir_to_report):
-
-        
         #rootdir = sys.argv[1]()
         #rootdir = "/Users/abc/Projects/AsahiLinux/m1n1-ftp/auto/output"
         rootdir = str(dir_to_report)
