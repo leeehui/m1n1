@@ -5,6 +5,9 @@ import argparse, pathlib
 
 class LogReporter:
     def __init__(self):
+        self.rename_row_start = 0 #if a sheet names "sheet-rename-xxx", this means we renamed a sheername longer than 31 characters
+        self.header_row_start = self.rename_row_start + 1
+        self.data_row_start = self.header_row_start + 1
         self.sherpa_counter_num = 6
         self.header = [["Core", "Ipc", "Cycle", "Inst", "Elfnum", "PMC2", "PMC3", "PMC4", "PMC5", "PMC6", "PMC7"],
                        ["Core", "Ipc", "Cycle", "Inst", "Elfnum", "PMC2", "PMC3", "PMC4", "PMC5", "PMC6", "PMC7"]]
@@ -102,7 +105,7 @@ class LogReporter:
             if idx >= 1:
                 init_col += len(header[idx-1]) + 1
             for sub_idx, name in enumerate(header[idx]):
-                ws.write(0, init_col + sub_idx, name)
+                ws.write(self.header_row_start, init_col + sub_idx, name)
 
     def fill_sheet_line(self, ws, row, col, info, elf_names, events):
         for idx in range(len(info)):
@@ -113,7 +116,6 @@ class LogReporter:
                 if sub_idx >= 5:
                     sub_item = events[sub_idx - 5] + " : " + sub_item
                 ws.write(row + idx, col + sub_idx + 1, sub_item)
-
 
     def do_report(self, dir_to_report):
 
@@ -126,6 +128,7 @@ class LogReporter:
         ws_error_startup = wb.add_sheet("Error_startup")
         #ws_error_cmd_timeout = wb.add_sheet("Error_cmd_timeout")
         error_cnt = 0
+        sheet_rename_cnt = 0
         #dirs = os.listdir("/Users/abc/Projects/AsahiLinux/m1n1-ftp/auto/output")
         for root, subdirs, files in os.walk(rootdir):
             if files:
@@ -137,17 +140,24 @@ class LogReporter:
                     if p:
                         sheet_name = sheet_name + "-" + p 
                 #print(sheet_name)
-                ws = wb.add_sheet(sheet_name)
+                try:
+                    ws = wb.add_sheet(sheet_name)
+                except:
+                    sheet_renamed = "sheet-rename-" + str(sheet_rename_cnt)
+                    sheet_rename_cnt += 1
+                    ws = wb.add_sheet(sheet_renamed)
+                    ws.write(self.rename_row_start, 0, sheet_name)
+
                 self.fill_sheet_header(ws)
-                row_delta = 0
-                row_delta_big_core = 1
+                row_delta = self.data_row_start
+                row_delta_big_core = self.data_row_start
                 col_start_big_core = len(self.header[0]) + 1
                 print(files)
                 for idx, file_name in enumerate(files):
                     if file_name.endswith('.log'):
                         file_path = os.path.join(root, file_name)
                         print(file_path)
-                        row_to_written = idx + row_delta + 1
+                        row_to_written = idx + row_delta
                         info, elf_names, events = self.get_info(file_path)
                         if info:
                             # report to specific sheet only if there is valic info
@@ -157,7 +167,7 @@ class LogReporter:
                             #print(elf_names)
                             #print(events)
                             self.fill_sheet_line(ws, row_to_written, 0, info, elf_names, events) 
-                            row_delta = row_delta + len(info)
+                            row_delta = row_delta + len(info) + 1
 
                             info_big_core = self.get_info_big_core(info)
                             if info_big_core:
