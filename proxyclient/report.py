@@ -73,12 +73,8 @@ class LogReporter:
         return sub_info
 
     # currently this temporarily for calculating ipc throuth rolling, depends on 
-    # rolling_interval 
-    # warmup inst (this case fixed to 20000000)
-    # real inst (not fixed)
-    # the overrall principle is count all the ROLLING lines, drop first(warmup=rolling_interval) and last(in case tail is less than warmup), 
-    # lines rest in between is the "real inst"
-    def get_rolling_info(self, lines, start_idx):
+    # rolling_valid_lines, this is calculated before
+    def get_rolling_info(self, lines, start_idx, rolling_valid_lines):
         info = []
         rolling_cycle = []
         rolling_inst = []
@@ -87,25 +83,38 @@ class LogReporter:
         idx = start_idx
         core_num = 0
         is_core_num_set = 0
+
+        # first we fall back to extract all rolling lines
         while re.match("\[C\d\]\[ROLLING\]", lines[idx]):
-            #res = lines[idx].split(",")
             res = re.findall(r"\d+", lines[idx])
-            #print(res)
             if not is_core_num_set:
                 core_num = res[0]
                 is_core_num_set = 1
-
+            # Note: this match relys on specific sherpa output!
+            # see [C\d][ROLLING]... for details
             rolling_inst.append(res[-3])
             rolling_cycle.append(res[-4])
 
             idx -= 1
-            #for i in range(self.sherpa_counter_num):
-            #    res[(i * 2 + 1)].split("counter\d+=")[1]
-        for i in range(1, len(rolling_cycle) - 1):
+        # do NOT forget reverse the result!
+        rolling_cycle = rolling_cycle[::-1]
+        rolling_inst = rolling_inst[::-1]
+        #print(rolling_valid_lines)
+        #print(rolling_cycle)
+        #print(rolling_inst)
+        # first is always warmup, just skip
+        for i in range(1, len(rolling_cycle)):
+            if i > rolling_valid_lines: # count only the rolling num dir name "tell" us 
+                break
             all_cycle += int(rolling_cycle[i])
             all_inst += int(rolling_inst[i])
-        
-        ipc = float(all_inst) / float(all_cycle)
+
+        #print("all_cycle %d" % all_cycle)
+        #print("all_inst %d" % all_inst)
+        if all_cycle:
+            ipc = float(all_inst) / float(all_cycle)
+        else:
+            ipc = sys.maxsize
 
         info.append(core_num)
         info.append(str(ipc))
@@ -118,7 +127,7 @@ class LogReporter:
         
         return info
 
-    def get_info(self, file_name):
+    def get_info(self, file_name, rolling_valid_lines):
         info = []
         elf_names = []
         events = []
@@ -136,7 +145,7 @@ class LogReporter:
                             start_idx -= 1
 
                         if re.match("\[C\d\]\[ROLLING\]", lines[idx - 1]):
-                            sub_info = self.get_rolling_info(lines, start_idx) 
+                            sub_info = self.get_rolling_info(lines, start_idx, rolling_valid_lines) 
                         else:
                             sub_info = self.get_ipc_pmc_info(lines[start_idx], lines[start_idx - 1]) 
                         info.append(sub_info)
@@ -179,6 +188,8 @@ class LogReporter:
     def do_report(self, dir_to_report):
         #rootdir = sys.argv[1]()
         #rootdir = "/Users/abc/Projects/AsahiLinux/m1n1-ftp/auto/output"
+        os.system("rm -rf %s/*.xls " % str(dir_to_report))
+        os.system("rm -rf %s/.* " % str(dir_to_report))
         rootdir = str(dir_to_report)
         report_name = os.path.join(rootdir, "report.xls")
         wb = xlwt.Workbook()
@@ -209,13 +220,29 @@ class LogReporter:
                 row_delta = self.data_row_start
                 row_delta_big_core = self.data_row_start
                 col_start_big_core = len(self.header[0]) + 1
+
+                # find rolling_valid_lines in dir name
+                # only for special binary dirs
+                dir_name = root.split("/")[-1]
+                splited_dir_name = dir_name.split("_inst") 
+                #print(dir_name)
+                #print(splited_dir_name)
+                rolling_valid_lines = 0
+                if len(splited_dir_name) >= 2: # if dir name contains "_inst"
+                    aux_data = re.findall(r"\d+", splited_dir_name[1]) # just extract all int nums
+                    if (len(aux_data) >= 2): # as naming is consistent for this kind of binary, 
+                        inst = aux_data[0]   # we are sure 0 is for effective inst
+                        warmup = aux_data[1] # we are sure 1 is for warmup    inst
+                        rolling_valid_lines = int(int(inst) / int(warmup))
+                        #print("rolling_valid_lines %d" % rolling_valid_lines)
                 print(files)
                 for idx, file_name in enumerate(files):
                     if file_name.endswith('.log'):
                         file_path = os.path.join(root, file_name)
+
                         print(file_path)
                         row_to_written = idx + row_delta
-                        info, elf_names, events = self.get_info(file_path)
+                        info, elf_names, events = self.get_info(file_path, rolling_valid_lines)
                         if info:
                             # report to specific sheet only if there is valic info
                             ws.write(row_to_written, 0, file_name)
