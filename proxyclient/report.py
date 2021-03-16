@@ -65,15 +65,58 @@ class LogReporter:
             sub_info.append(cycle)
             sub_info.append(instruction)
 
+        # Note: first item is elfnum, we just did not extract that
         pmcs = re.findall(r"\b\d+\b", line_pmc)
         for pmc in pmcs:
             sub_info.append(pmc)
 
         return sub_info
 
+    # currently this temporarily for calculating ipc throuth rolling, depends on 
+    # rolling_interval 
+    # warmup inst (this case fixed to 20000000)
+    # real inst (not fixed)
+    # the overrall principle is count all the ROLLING lines, drop first(warmup=rolling_interval) and last(in case tail is less than warmup), 
+    # lines rest in between is the "real inst"
     def get_rolling_info(self, lines, start_idx):
+        info = []
+        rolling_cycle = []
+        rolling_inst = []
+        all_cycle = 0
+        all_inst = 0
+        idx = start_idx
+        core_num = 0
+        is_core_num_set = 0
+        while re.match("\[C\d\]\[ROLLING\]", lines[idx]):
+            #res = lines[idx].split(",")
+            res = re.findall(r"\d+", lines[idx])
+            #print(res)
+            if not is_core_num_set:
+                core_num = res[0]
+                is_core_num_set = 1
+
+            rolling_inst.append(res[-3])
+            rolling_cycle.append(res[-4])
+
+            idx -= 1
+            #for i in range(self.sherpa_counter_num):
+            #    res[(i * 2 + 1)].split("counter\d+=")[1]
+        for i in range(1, len(rolling_cycle) - 1):
+            all_cycle += int(rolling_cycle[i])
+            all_inst += int(rolling_inst[i])
         
-        pass
+        ipc = float(all_inst) / float(all_cycle)
+
+        info.append(core_num)
+        info.append(str(ipc))
+        info.append(str(all_cycle))
+        info.append(str(all_inst))
+        # elf_num forced to 0
+        info.append("0")
+        for i in range(self.sherpa_counter_num): 
+            info.append("0")
+        
+        return info
 
     def get_info(self, file_name):
         info = []
