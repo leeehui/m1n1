@@ -5,6 +5,7 @@ import os, sys, struct
 from serial.tools.miniterm import Miniterm
 import time
 import re
+from threading import Timer
 
 def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
@@ -94,6 +95,7 @@ class UartInterface:
             #d = self.dev.read(1)
         self.dev.timeout = 3
         self.tty_enable = True
+        self.is_cmd_timeout = False
 
     def checksum(self, data):
         sum = 0xDEADBEEF;
@@ -112,12 +114,34 @@ class UartInterface:
                 raise UartTimeout("Expected %d bytes, got %d bytes"%(size,len(d)))
             d += block
         return d
+
+    def cmd_timeout_handler(self):
+        self.is_cmd_timeout = True
+
+    def readfull_with_timeout(self, size):
+        d = b''
+        
+        self.is_cmd_timeout = False 
+        timer = Timer(20, self.cmd_timeout_handler)
+        timer.start()
+        while (len(d) < size) and (not self.is_cmd_timeout):
+            block = self.dev.read(size - len(d))
+            if block:
+                d += block
+        if not self.is_cmd_timeout:
+            timer.cancel()
+        return d
     
     def wait_run_elf_cmd(self, ascii_pattern):
         buf = []
-        #byte_pattern = bytes("]Success", encoding="utf-8")
+        # temporarily set read unblock
+        tout = self.dev.timeout
+        self.dev.timeout = 0 
         while True:
-            byte = self.readfull(1)
+            byte = self.readfull_with_timeout(1)
+            if self.is_cmd_timeout:
+                print("cmd time out!", flush = True)
+                break
             sys.stdout.buffer.write(byte)
             sys.stdout.buffer.flush()
             buf.append(int.from_bytes(byte, "little"))
@@ -129,6 +153,7 @@ class UartInterface:
                     break
                 else:
                     buf.clear()
+        self.dev.timeout = tout
 
     def cmd(self, cmd, payload=b""):
         if len(payload) > self.CMD_LEN:
