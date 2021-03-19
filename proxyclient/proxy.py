@@ -134,6 +134,7 @@ class UartInterface:
     
     def wait_run_elf_cmd(self, ascii_pattern):
         buf = []
+        time.sleep(0.5)
         # temporarily set read unblock
         tout = self.dev.timeout
         self.dev.timeout = 0 
