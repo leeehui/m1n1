@@ -2,6 +2,7 @@ import os, sys
 import re
 import xlwt
 import argparse, pathlib
+import shutil
 
 class LogReporter:
     def __init__(self):
@@ -165,6 +166,23 @@ class LogReporter:
                 # we only need the first big core item
                 break
         return info_big_core
+    
+    def get_valid_rolling_num(self, root):
+        # find rolling_valid_lines in dir name
+        # only for special binary dirs
+        dir_name = root.split("/")[-1]
+        splited_dir_name = dir_name.split("_inst") 
+        #print(dir_name)
+        #print(splited_dir_name)
+        rolling_valid_lines = 0
+        if len(splited_dir_name) >= 2: # if dir name contains "_inst"
+            aux_data = re.findall(r"\d+", splited_dir_name[1]) # just extract all int nums
+            if (len(aux_data) >= 2): # as naming is consistent for this kind of binary, 
+                inst = aux_data[0]   # we are sure 0 is for effective inst
+                warmup = aux_data[1] # we are sure 1 is for warmup    inst
+                rolling_valid_lines = int(int(inst) / int(warmup))
+                #print("rolling_valid_lines %d" % rolling_valid_lines)
+        return rolling_valid_lines
 
     def fill_sheet_header(self, ws):
         header = self.header
@@ -188,8 +206,11 @@ class LogReporter:
     def do_report(self, dir_to_report):
         #rootdir = sys.argv[1]()
         #rootdir = "/Users/abc/Projects/AsahiLinux/m1n1-ftp/auto/output"
+        rerun_dir = str(dir_to_report) + "/Rerun" 
         os.system("rm -rf %s/*.xls " % str(dir_to_report))
         os.system("rm -rf %s/.* " % str(dir_to_report))
+        os.system("rm -rf %s " % rerun_dir)
+        os.system("mkdir %s " % rerun_dir)
         rootdir = str(dir_to_report)
         report_name = os.path.join(rootdir, "report.xls")
         wb = xlwt.Workbook()
@@ -221,20 +242,8 @@ class LogReporter:
                 row_delta_big_core = self.data_row_start
                 col_start_big_core = len(self.header[0]) + 1
 
-                # find rolling_valid_lines in dir name
-                # only for special binary dirs
-                dir_name = root.split("/")[-1]
-                splited_dir_name = dir_name.split("_inst") 
-                #print(dir_name)
-                #print(splited_dir_name)
-                rolling_valid_lines = 0
-                if len(splited_dir_name) >= 2: # if dir name contains "_inst"
-                    aux_data = re.findall(r"\d+", splited_dir_name[1]) # just extract all int nums
-                    if (len(aux_data) >= 2): # as naming is consistent for this kind of binary, 
-                        inst = aux_data[0]   # we are sure 0 is for effective inst
-                        warmup = aux_data[1] # we are sure 1 is for warmup    inst
-                        rolling_valid_lines = int(int(inst) / int(warmup))
-                        #print("rolling_valid_lines %d" % rolling_valid_lines)
+                rolling_valid_lines = self.get_valid_rolling_num(root)
+
                 print(files)
                 for idx, file_name in enumerate(files):
                     if file_name.endswith('.log'):
@@ -261,6 +270,15 @@ class LogReporter:
                         else:
                             ws_error_startup.write(error_cnt, 0, file_path)
                             error_cnt = error_cnt + 1
+                            rerun_file_name = file_path.replace("output/", "")
+                            rerun_file_name = rerun_file_name.replace(".log", "")
+                            rerun_file_dest = root.replace("output/","output/Rerun/")
+                            os.system("mkdir -p %s"% rerun_file_dest)
+                            #print(root)
+                            print(rerun_file_name)
+                            print(rerun_file_dest)
+                            shutil.copy(rerun_file_name, rerun_file_dest)
+                            
         wb.save(report_name)
         if error_cnt:
             print("total error_cnt: %d, please check report xls" % error_cnt)
