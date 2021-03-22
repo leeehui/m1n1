@@ -132,7 +132,7 @@ class UartInterface:
             timer.cancel()
         return d
     
-    def wait_run_elf_cmd(self, ascii_pattern):
+    def wait_run_elf_cmd_with_timeout(self, ascii_pattern):
         buf = []
         time.sleep(0.5)
         # temporarily set read unblock
@@ -155,6 +155,22 @@ class UartInterface:
                 else:
                     buf.clear()
         self.dev.timeout = tout
+
+    def wait_run_elf_cmd(self, ascii_pattern):
+            buf = []
+            while True:
+                byte = self.readfull(1)
+                sys.stdout.buffer.write(byte)
+                sys.stdout.buffer.flush()
+                buf.append(int.from_bytes(byte, "little"))
+                if byte == b'\n':
+                    #if re.match(b']Success', buf):
+                    buf_array = bytes(buf)
+                    if re.search(ascii_pattern, buf_array):
+                        #print("wait run_elf ok")
+                        break
+                    else:
+                        buf.clear()
 
     def cmd(self, cmd, payload=b""):
         if len(payload) > self.CMD_LEN:
