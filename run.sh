@@ -17,11 +17,45 @@ handle_file()
 	python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
 	rm -rf ${file}.gz
 }
+gen_cmd_file_for_qemu_rolling()
+{
+	file_name=$1
+	ca_list_file=$2		
+	log_file=$3
+	cmd_file=$4
+
+	# when make sherpa from original elf, we add "sherpa_" prefix, but ca_list do NOT have this prefix
+	# so, remove the prefix in order to "grep" in ca_list file
+	file_name_ca_list=${file_name:7}
+	echo $file_name_ca_list
+	
+	# -w -i locates in the second part 
+	temp=`grep -rnw $file_name_ca_list $ca_list_file | awk -F "," '{print $2}'`
+	warmup_inst_num=`echo $temp | awk -F " " '{print $2 }'`
+	total_inst_num=`echo $temp | awk -F " " '{print $4 }'`
+	
+	echo "warmup_inst_num=$warmup_inst_num" > $log_file
+	echo "total_inst_num=$total_inst_num" >> $log_file
+
+	echo "show_elf" > $cmd_file
+	echo "change_config rolling_interval 20000000" >> $cmd_file
+	echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+}
 handle_path() 
 {
 	# you may need to change the following two configs
 	test_dir=$1
 	cmds=$2
+	ca_list_file=
+	use_ca_list=off
+
+	if [ 3 -eq $# ]; then
+		ca_list_file=$3
+		use_ca_list=on
+	fi
 	test_output_dir=$test_dir/output
 	
 	cd $test_dir
@@ -34,6 +68,7 @@ handle_path()
 	
 	# find all sub dirs
 	# file_dirs=`find $test_dir -type f | xargs dirname | uniq`
+	# Bug: the following command works incrrect when their is only 1 sub-dir
 	file_dirs=`ls -R ./* | grep  ":" | awk -F ":" '{print $1}'`
 	
 	# mk output dir in case file_dirs is null which will cause error when redirecting log file
@@ -57,6 +92,13 @@ handle_path()
 		echo $file_dir
 		file_name=`echo $file | xargs basename`
 		echo $file_name
+
+		log_file=$test_output_dir/${file}.log
+		
+		if [ "on" = $use_ca_list ]; then
+			echo "use list........"
+			gen_cmd_file_for_qemu_rolling $file_name $ca_list_file $log_file $cmds
+		fi
 		
 		gzip < $file > ${file}.gz
 		cd $macvdmtool_dir
@@ -64,8 +106,8 @@ handle_path()
 		cd -
 		sleep 15
 		echo "running payload"
-		#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds | tee $test_output_dir/${file}.log
-		python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds > $test_output_dir/${file}.log
+		python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds | tee -a $log_file
+		#python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz -c $cmds >> $log_file
 		rm -rf ${file}.gz
 	done
 	echo "reporting..."
@@ -87,8 +129,10 @@ if [ -d $1 ]; then
 	if [ 1 -eq $# ]; then
 		echo "please input cmds file that sherpa will automatically run"
 		exit
-	else
+	elif [ 2 -eq $# ]; then
 		handle_path $1 $2
+	elif [ 3 -eq $# ]; then
+		handle_path $1 $2 $3
 	fi
 
 elif [ -f $1 ]; then
