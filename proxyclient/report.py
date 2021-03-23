@@ -75,7 +75,7 @@ class LogReporter:
 
     # currently this temporarily for calculating ipc throuth rolling, depends on 
     # rolling_valid_lines, this is calculated before
-    def get_rolling_info(self, lines, start_idx, rolling_valid_lines):
+    def get_rolling_info(self, lines, start_idx, rolling_valid_lines, is_skip_first_rolling):
         info = []
         rolling_cycle = []
         rolling_inst = []
@@ -104,7 +104,11 @@ class LogReporter:
         #print(rolling_cycle)
         #print(rolling_inst)
         # first is always warmup, just skip
-        for i in range(1, len(rolling_cycle)):
+        if is_skip_first_rolling == True:
+            start = 1
+        else:
+            start = 0
+        for i in range(start, len(rolling_cycle)):
             if i > rolling_valid_lines: # count only the rolling num dir name "tell" us 
                 break
             all_cycle += int(rolling_cycle[i])
@@ -128,7 +132,7 @@ class LogReporter:
         
         return info
 
-    def get_info(self, file_name, rolling_valid_lines):
+    def get_info(self, file_name, rolling_valid_lines, is_skip_first_rolling):
         info = []
         elf_names = []
         events = []
@@ -146,7 +150,7 @@ class LogReporter:
                             start_idx -= 1
 
                         if re.match("\[C\d\]\[ROLLING\]", lines[idx - 1]):
-                            sub_info = self.get_rolling_info(lines, start_idx, rolling_valid_lines) 
+                            sub_info = self.get_rolling_info(lines, start_idx, rolling_valid_lines, is_skip_first_rolling) 
                         else:
                             sub_info = self.get_ipc_pmc_info(lines[start_idx], lines[start_idx - 1]) 
                         info.append(sub_info)
@@ -167,9 +171,9 @@ class LogReporter:
                 break
         return info_big_core
     
+    # find rolling_valid_lines in dir name
+    # only for special binary dirs
     def get_valid_rolling_num(self, root):
-        # find rolling_valid_lines in dir name
-        # only for special binary dirs
         dir_name = root.split("/")[-1]
         splited_dir_name = dir_name.split("_inst") 
         #print(dir_name)
@@ -182,6 +186,23 @@ class LogReporter:
                 warmup = aux_data[1] # we are sure 1 is for warmup    inst
                 rolling_valid_lines = int(int(inst) / int(warmup))
                 #print("rolling_valid_lines %d" % rolling_valid_lines)
+        return rolling_valid_lines
+    
+    def get_valid_rolling_num_from_log(self, log_file):
+        rolling_valid_lines = 0
+        with open(log_file, 'r', encoding='unicode_escape') as file_content:
+            line_warmup = file_content.readline()
+            if re.match("warmup_inst_num=", line_warmup):
+                warmup_inst = int(re.findall(r"\d+", line_warmup)[0])
+                line_total_inst = file_content.readline()
+                total_inst = int(re.findall(r"\d+", line_total_inst)[0])
+                line_rolling_interval = file_content.readline()
+                rolling_interval = int(re.findall(r"\d+", line_rolling_interval)[0])
+
+                # as for warmup_inst = 0, we have change cmd file in run.sh, just do report 
+                if rolling_interval != 0:
+                    rolling_valid_lines = (total_inst - warmup_inst) / rolling_interval
+
         return rolling_valid_lines
 
     def fill_sheet_header(self, ws):
@@ -250,8 +271,14 @@ class LogReporter:
                         file_path = os.path.join(root, file_name)
 
                         print(file_path)
+
                         row_to_written = idx + row_delta
-                        info, elf_names, events = self.get_info(file_path, rolling_valid_lines)
+
+                        rolling_valid_lines_from_log = self.get_valid_rolling_num_from_log(file_path)
+                        if rolling_valid_lines_from_log:
+                            info, elf_names, events = self.get_info(file_path, rolling_valid_lines, is_skip_first_rolling = False)
+                        else:
+                            info, elf_names, events = self.get_info(file_path, rolling_valid_lines, is_skip_first_rolling = True)
                         if info:
                             # report to specific sheet only if there is valic info
                             ws.write(row_to_written, 0, file_name)

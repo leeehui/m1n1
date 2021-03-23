@@ -17,6 +17,7 @@ handle_file()
 	python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
 	rm -rf ${file}.gz
 }
+
 gen_cmd_file_for_qemu_rolling()
 {
 	file_name=$1
@@ -36,14 +37,24 @@ gen_cmd_file_for_qemu_rolling()
 	
 	echo "warmup_inst_num=$warmup_inst_num" > $log_file
 	echo "total_inst_num=$total_inst_num" >> $log_file
+	echo "rolling_interval=20000000" >> $log_file
 
 	echo "show_elf" > $cmd_file
-	echo "change_config rolling_interval 20000000" >> $cmd_file
-	echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
-	echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
-	echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
-	echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	if [ "0" = $warmup_inst_num ]; then
+		echo "run_elf_unpack 0 0 2" >> $cmd_file
+		echo "run_elf_unpack 0 0 2" >> $cmd_file
+		echo "4 run_elf_unpack 0 0 2" >> $cmd_file
+		echo "4 run_elf_unpack 0 0 2" >> $cmd_file
+	else
+		echo "change_config rolling_interval 20000000" >> $cmd_file
+		echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+		echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+		echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+		echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	fi
+	echo "show_elf" >> $cmd_file
 }
+
 handle_path() 
 {
 	# you may need to change the following two configs
