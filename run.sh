@@ -35,6 +35,11 @@ gen_cmd_file_for_qemu_rolling()
 	warmup_inst_num=`echo $temp | awk -F " " '{print $2 }'`
 	total_inst_num=`echo $temp | awk -F " " '{print $4 }'`
 	
+	if [ -z "$warmup_inst_num" ]; then
+		echo "*************************************not in ca list*************************************"
+		return 0
+	fi
+	
 	# this info will be used by report.py. in short, this will be used to determine whether to ignore
 	# the first rolling line. as report.py also have a mode(mostly for spec related test) ignoring the
 	# first rolling line and we want do all the ugly modes in one script. see report.py for more detail
@@ -47,7 +52,7 @@ gen_cmd_file_for_qemu_rolling()
 
 	# for the first elf of every gkb sub-item, -w is fixed to 0,
 	# and is gaurranteed to have svc inst, use unpack rolling mode
-	if [ "0" = $warmup_inst_num ]; then
+	if [[ "0" = $warmup_inst_num ]]; then
 		echo "run_elf_unpack 0 0 2" >> $cmd_file
 		echo "run_elf_unpack 0 0 2" >> $cmd_file
 		echo "4 run_elf_unpack 0 0 2" >> $cmd_file
@@ -61,6 +66,7 @@ gen_cmd_file_for_qemu_rolling()
 		echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
 	fi
 	echo "show_elf" >> $cmd_file
+	return 1
 }
 
 handle_path() 
@@ -118,10 +124,16 @@ handle_path()
 
 		log_file=$test_output_dir/${file}.log
 		
-		if [ "on" = $use_ca_list ]; then
+		if [[ "on" = $use_ca_list ]]; then
 			echo "use list........"
 			gen_cmd_file_for_qemu_rolling $file_name $ca_list_file $log_file $cmds
+			res=$?
+			if [ $res = "0" ];then
+				continue
+			fi
 		fi
+
+		echo "running payload ........"
 		
 		gzip < $file > ${file}.gz
 		cd $macvdmtool_dir
