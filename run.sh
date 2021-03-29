@@ -12,7 +12,7 @@ handle_file()
 	cd $macvdmtool_dir
 	echo $passwd | sudo -S ./macvdmtool reboot serial
 	cd -
-	sleep 8
+	sleep 10
 	echo "running payload"
 	python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
 	rm -rf ${file}.gz
@@ -47,8 +47,13 @@ gen_cmd_file_for_qemu_rolling()
 	echo "total_inst_num=$total_inst_num" >> $log_file
 	echo "rolling_interval=20000000" >> $log_file
 
-	echo "show_elf" > $cmd_file
-	echo "change_config rolling_interval 20000000" >> $cmd_file
+	# this just used for gkb-207, manually uncomment this and comment following if-else-fi block 
+	#echo "show_elf" > $cmd_file
+	#echo "change_config rolling_interval 20000000" >> $cmd_file
+	#echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	#echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	#echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
+	#echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
 
 	# for the first elf of every gkb sub-item, -w is fixed to 0,
 	# and is gaurranteed to have svc inst, use unpack rolling mode

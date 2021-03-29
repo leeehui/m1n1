@@ -108,11 +108,13 @@ class LogReporter:
             start = 1
         else:
             start = 0
+        cnt = 0
         for i in range(start, len(rolling_cycle)):
-            if i > rolling_valid_lines: # count only the rolling num dir name "tell" us 
+            if cnt >= rolling_valid_lines: # count only the rolling num dir name "tell" us 
                 break
             all_cycle += int(rolling_cycle[i])
             all_inst += int(rolling_inst[i])
+            cnt += 1
 
         #print("all_cycle %d" % all_cycle)
         #print("all_inst %d" % all_inst)
@@ -276,7 +278,8 @@ class LogReporter:
 
                         rolling_valid_lines_from_log = self.get_valid_rolling_num_from_log(file_path)
                         if rolling_valid_lines_from_log:
-                            info, elf_names, events = self.get_info(file_path, rolling_valid_lines, is_skip_first_rolling = False)
+                            print("rolling_valid_lines_from_log: %d" % rolling_valid_lines_from_log)
+                            info, elf_names, events = self.get_info(file_path, rolling_valid_lines_from_log, is_skip_first_rolling = False)
                         else:
                             info, elf_names, events = self.get_info(file_path, rolling_valid_lines, is_skip_first_rolling = True)
                         if info:
@@ -299,10 +302,11 @@ class LogReporter:
                             error_cnt = error_cnt + 1
                             rerun_file_name = file_path.replace("output/", "")
                             rerun_file_name = rerun_file_name.replace(".log", "")
-                            rerun_file_dest = root.replace("output/","output/Rerun/")
+                            rerun_file_dest = root.replace("output","output/Rerun")
                             os.system("mkdir -p %s"% rerun_file_dest)
                             #print(root)
                             print(rerun_file_name)
+                            print(root)
                             print(rerun_file_dest)
                             shutil.copy(rerun_file_name, rerun_file_dest)
                             
