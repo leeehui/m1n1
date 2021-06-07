@@ -11,6 +11,7 @@ class LogReporter:
         self.data_row_start = self.header_row_start + 1
         self.sherpa_counter_num = 6
         self.header = [["Core", "Ipc", "Cycle", "Inst", "Elfnum", "PMC2", "PMC3", "PMC4", "PMC5", "PMC6", "PMC7"],
+                       ["Core", "Ipc", "Cycle", "Inst", "Elfnum", "PMC2", "PMC3", "PMC4", "PMC5", "PMC6", "PMC7"],
                        ["Core", "Ipc", "Cycle", "Inst", "Elfnum", "PMC2", "PMC3", "PMC4", "PMC5", "PMC6", "PMC7"]]
 
     def is_valid_log(self, lines):
@@ -172,6 +173,15 @@ class LogReporter:
                 # we only need the first big core item
                 break
         return info_big_core
+
+    def get_info_little_core(self, info):
+        info_little_core = []
+        for idx in range(len(info)):
+            if int(info[idx][0]) < 4:
+                info_little_core.append(info[idx])
+                # we only need the first big core item
+                break
+        return info_little_core
     
     # find rolling_valid_lines in dir name
     # only for special binary dirs
@@ -264,6 +274,8 @@ class LogReporter:
                 row_delta = self.data_row_start
                 row_delta_big_core = self.data_row_start
                 col_start_big_core = len(self.header[0]) + 1
+                row_delta_little_core = self.data_row_start
+                col_start_little_core = col_start_big_core + len(self.header[0]) + 1
 
                 rolling_valid_lines = self.get_valid_rolling_num(root)
 
@@ -297,6 +309,12 @@ class LogReporter:
                                 ws.write(row_delta_big_core, col_start_big_core, file_name)
                                 self.fill_sheet_line(ws, row_delta_big_core, col_start_big_core, info_big_core, elf_names, events)
                                 row_delta_big_core += 1 #only have one item
+
+                            info_little_core = self.get_info_little_core(info)
+                            if info_little_core:
+                                ws.write(row_delta_little_core, col_start_little_core, file_name)
+                                self.fill_sheet_line(ws, row_delta_little_core, col_start_little_core, info_little_core, elf_names, events)
+                                row_delta_little_core += 1 #only have one item
                         else:
                             ws_error_startup.write(error_cnt, 0, file_path)
                             error_cnt = error_cnt + 1
