@@ -47,9 +47,11 @@ gen_cmd_file_for_qemu_rolling()
 	echo "total_inst_num=$total_inst_num" >> $log_file
 	echo "rolling_interval=20000000" >> $log_file
 
-	# this just used for gkb-207, manually uncomment this and comment following if-else-fi block 
-	#echo "show_elf" > $cmd_file
-	#echo "change_config rolling_interval 20000000" >> $cmd_file
+	echo "show_elf" > $cmd_file
+	echo "change_config rolling_interval 20000000" >> $cmd_file
+	echo "write_sys_reg 3 0 1 0 1 0xc08" >> $cmd_file
+
+	# Note: this just used for gkb-207, manually uncomment this and comment following if-else-fi block 
 	#echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
 	#echo "run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
 	#echo "4 run_elf_qemu 0 0 $warmup_inst_num 2" >> $cmd_file
@@ -156,7 +158,16 @@ handle_path()
 
 help()
 {
-	echo "./run.sh <your test bin file/root dir> [corresponding sherpa cmd if you input a root dir]"
+	echo "./run.sh <your test bin file/root dir> [corresponding sherpa cmd if you input a root dir] [ca list file for specific gkb tests]"
+	echo ""
+	echo "Special notes about spec/gkb test:"
+	echo ""
+	echo "	  specInt/FP: cmd file should contain:"
+	echo "                change_config rolling_interval 20000000"
+	echo "                run_elf_unpack 0 0 2"
+	echo ""
+	echo "	  gkb       : use a txt file as cmd, run.sh will fill with valid cmd"
+	echo "	              give 3rd parameter, ca list file"
 }
 
 if [ 0 -eq $# ]; then

@@ -321,12 +321,13 @@ class LogReporter:
                             rerun_file_name = file_path.replace("output/", "")
                             rerun_file_name = rerun_file_name.replace(".log", "")
                             rerun_file_dest = root.replace("output","output/Rerun")
-                            os.system("mkdir -p %s"% rerun_file_dest)
-                            #print(root)
-                            print(rerun_file_name)
-                            print(root)
-                            print(rerun_file_dest)
-                            shutil.copy(rerun_file_name, rerun_file_dest)
+                            if pathlib.Path(rerun_file_name).exists():
+                                os.system("mkdir -p %s"% rerun_file_dest)
+                                #print(root)
+                                print(rerun_file_name)
+                                print(root)
+                                print(rerun_file_dest)
+                                shutil.copy(rerun_file_name, rerun_file_dest)
                             
         wb.save(report_name)
         if error_cnt:
