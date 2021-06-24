@@ -13,6 +13,10 @@ handle_file()
 	echo $passwd | sudo -S ./macvdmtool reboot serial
 	cd -
 	sleep 10
+
+	echo "updating m1n1"
+	python3.9 ${m1n1_dir}/proxyclient/chainload.py ~/m1n1.macho
+	
 	echo "running payload"
 	python3.9 ${m1n1_dir}/proxyclient/sherpa.py ${file}.gz
 	rm -rf ${file}.gz
