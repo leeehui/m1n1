@@ -11,6 +11,7 @@
 #include "uart.h"
 #include "utils.h"
 #include "xnuboot.h"
+#include "cpufreq.h"
 
 #include "minilzlib/minlzma.h"
 #include "tinf/tinf.h"
@@ -281,6 +282,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             smp_call4(request->args[0], (void *)request->args[1], request->args[2],
                       request->args[3], request->args[4], request->args[5]);
             reply->retval = smp_wait(request->args[0]);
+            break;
+
+        case P_SMP_SETFREQ:
+            reply->retval = apple_m1_cpufreq_set_target(request->args[0], request->args[1]);
             break;
 
         case P_HEAPBLOCK_ALLOC:

@@ -8,6 +8,7 @@
 #include "uart.h"
 #include "utils.h"
 #include "xnuboot.h"
+#include "cpufreq.h"
 
 u64 boot_args_addr;
 struct boot_args cur_boot_args;
@@ -91,6 +92,10 @@ void _start_c(void *boot_args, void *base)
         (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base + cur_boot_args.phys_base);
 
     exception_initialize();
+
+    printf("Setting up cpufreq......\n");
+    apple_m1_cpufreq_hwsetup();
+
     m1n1_main();
 }
 

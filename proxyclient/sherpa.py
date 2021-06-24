@@ -33,7 +33,7 @@ assert not (kernel_base & 0xffff)
 print("smp_start_secondaries...")
 p.smp_start_secondaries()
 
-#ap_trampoline_code_addr = 0x890000000 
+#ap_trampoline_code_addr = 0x890000000
 #c = asm.ARMAsm("""
 #        msr DAIFClr, 7
 #        ldr x1, =0x880000000
@@ -72,6 +72,9 @@ for i in range(1, core_num):
     p.smp_call(i, kernel_base)
     iface.wait_one_cmd(silent = True)
     #time.sleep(1) #seems sherpa do NOT support simultaneously smp boot, so must sleep!
+
+print("trying to speedup big cores", flush=True)
+p.smp_call_setfreq(1, 15)
 
 print("Ready to boot", flush=True)
 daif = u.mrs(DAIF)

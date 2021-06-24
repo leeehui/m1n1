@@ -120,8 +120,8 @@ class UartInterface:
 
     def readfull_with_timeout(self, size):
         d = b''
-        
-        self.is_cmd_timeout = False 
+
+        self.is_cmd_timeout = False
         timer = Timer(20, self.cmd_timeout_handler)
         timer.start()
         while (len(d) < size) and (not self.is_cmd_timeout):
@@ -131,13 +131,13 @@ class UartInterface:
         if not self.is_cmd_timeout:
             timer.cancel()
         return d
-    
+
     def wait_run_elf_cmd_with_timeout(self, ascii_pattern):
         buf = []
         time.sleep(0.5)
         # temporarily set read unblock
         tout = self.dev.timeout
-        self.dev.timeout = 0 
+        self.dev.timeout = 0
         while True:
             byte = self.readfull_with_timeout(1)
             if self.is_cmd_timeout:
@@ -232,7 +232,7 @@ class UartInterface:
                             self.wait_one_cmd()
             except IOError as e:
                 sys.stderr.write('--- ERROR opening file {}: {} ---\n'.format(str(cmds), e))
-                
+
         else:
             term = Miniterm(self.dev, eol='cr')
             term.exit_character = chr(0x1d)  # GS/CTRL+]
@@ -438,6 +438,7 @@ class M1N1Proxy:
     P_SMP_START_SECONDARIES = 0x500
     P_SMP_CALL = 0x501
     P_SMP_CALL_SYNC = 0x502
+    P_SMP_SETFREQ = 0x503
 
     P_HEAPBLOCK_ALLOC = 0x600
     P_MALLOC = 0x601
@@ -680,6 +681,9 @@ class M1N1Proxy:
         if len(args) > 4:
             raise ValueError("Too many arguments")
         return self.request(self.P_SMP_CALL_SYNC, cpu, addr, *args)
+
+    def smp_set_freq(self, cluster, idx):
+        return self.request(self.P_SMP_SETFREQ, cluster, idx)
 
     def heapblock_alloc(self, size):
         return self.request(self.P_HEAPBLOCK_ALLOC, size)
